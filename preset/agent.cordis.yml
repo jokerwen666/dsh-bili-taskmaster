@@ -1,0 +1,26 @@
+# dsh-bili-taskmaster — agent preset 脚手架
+#
+# ⚠️ 重要：本插件当前是 DSH「动态插件」（session 级，进程重启即失效）。
+# 动态插件的源码是 host.js / client.js 两个函数体，由
+# cordis-host-runner / cordis-client-runner 在运行时求值，不落盘、也不进组合文件。
+#
+# 要把它变成「永久生效」的组合行，必须先做一次静态移植：
+#   1. Host 半  → 一个 ESM 模块，导出 `apply(ctx)`，包 `main` 指向它；
+#   2. Client 半 → 打包（如 tsdown）成浏览器 bundle，放在 `exports["./client"]`，
+#      并在 package.json 声明 `{ "dsh": { "client": { "platform": "web" } } }`；
+#   3. 把该 npm 包发布（或安装进 DSH 的 node_modules），然后启用下面这一行。
+#
+# 动态插件的 `harness.handle` / `host.call` 是「单包私有 RPC」，静态插件需改用
+# DSH 的 api-proxy / 远程服务层；Client 半还需接入 @deepseek-ai/dsh-client-runtime
+# 等模块并打包。因此这个移植是独立的工程任务，尚未完成（见 ../README.md）。
+#
+# 另外，这个插件本质是「跨会话的浏览器浮层 + 流式代理」，按 DSH 的 plane 规则，
+# 永久的家更接近 host composition（base.cordis.yml / web.cordis.yml），而非 agent
+# preset；它不发布任何 service（只消费 host 服务），所以也能以松散行存在。
+#
+# 下面的行默认 disabled：loader 不会 import 它，mount 校验可通过。等静态包
+# `dsh-bili-taskmaster` 真实可用后，删掉 `disabled: true` 即可生效。
+- id: bili-taskmaster
+  name: dsh-bili-taskmaster
+  disabled: true
+  # config: {}

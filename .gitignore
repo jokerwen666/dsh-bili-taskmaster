@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# DSH runtime / build artifacts
+lib/
+dist/
+*.tsbuildinfo
+
+# Local secrets — never commit credentials
+.dsh/
+.credentials.yaml
+.env
+
+# OS / editor
+.DS_Store
+*.log
