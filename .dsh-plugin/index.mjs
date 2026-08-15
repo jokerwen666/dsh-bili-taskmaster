@@ -1,32 +1,9 @@
-// dsh-bili-taskmaster — HOST half (DSH dynamic Cordis plugin)
-//
-// This file is the exact `code.host` function body of the running plugin
-// (`bili-1`, package pkg-42). It is NOT a standalone Node script: DSH's
-// cordis-host-runner evaluates it as the body of an async function whose
-// parameters ARE the host surface (`ctx`, `harness`, `console`, …), and it
-// must `return` a Cordis plugin object.
-//
-// Install it as a dynamic plugin:
-//   cordis_define  code.host = contents of this file
-//                  code.client = contents of client.js
-//   cordis_run     (then approve in the Web GUI)
-//
-// What the host half owns:
-//   * Bilibili API access via the `shell` service (curl), the `web` service,
-//     and the `subprocess` service (binary streaming).
-//   * A streaming MP4 proxy at /bili-proxy (no temp files; Range support for
-//     seeking and moov fast-start).
-//   * WBI-signed personalized recommendations, QR login, danmaku (new
-//     protobuf seg.so endpoint with a hand-written parser), favorites,
-//     quality/dash resolution, and the preload queue.
-//   * Client<->Host RPC handlers (`harness.handle`): get-status, next,
-//     login-start, login-poll, logout, set-dmfont, set-dmdensity,
-//     set-autopause, fav-video, get-playurl, get-dash, get-danmaku.
-//   * Persistence of login/danmaku/autopause via the `credentials` service
-//     (~/.dsh/.credentials.yaml) — no secrets are hardcoded.
-return {
-  apply(ctx) {
-    const web = ctx.get('web')
+export const name = 'dsh-bili-taskmaster'
+
+// dsh-bili-taskmaster — HOST half (static Cordis plugin, ESM).
+// Serves the /bili-proxy streaming MP4 proxy and the /bili-api JSON RPC.
+
+export function apply(ctx) {
     const shell = ctx.get('shell')
     const creds = ctx.get('credentials')
     const subprocess = ctx.get('subprocess')
@@ -570,17 +547,18 @@ return {
 
     ctx.on('agent/session-start', function () { turn += 1; advance(turn) })
 
-    harness.handle('get-status', function () {
+    const handlers = {}
+    handlers['get-status'] = function () {
       return { turn: turn, video: video, hasSessdata: sessdata.length > 0, account: account, error: lastError, agentStatus: agentStatus, dmFont: dmFont, dmDensity: dmDensity, autoPause: autoPause }
-    })
+    }
 
-    harness.handle('next', async function () {
+    handlers['next'] = async function () {
       turn += 1
       await advance(turn)
       return { turn: turn, video: video, error: lastError, hasSessdata: sessdata.length > 0, account: account, agentStatus: agentStatus, dmFont: dmFont, dmDensity: dmDensity, autoPause: autoPause }
-    })
+    }
 
-    harness.handle('login-start', async function () {
+    handlers['login-start'] = async function () {
       try {
         const j = await curlJson(GEN, '')
         if (j && j.code === 0 && j.data && j.data.qrcode_key) {
@@ -589,9 +567,9 @@ return {
         }
         return { error: '生成二维码失败' }
       } catch (e) { return { error: String(e && e.message ? e.message : e) } }
-    })
+    }
 
-    harness.handle('login-poll', async function () {
+    handlers['login-poll'] = async function () {
       if (!loginKey) return { status: 'expired' }
       try {
         const pr = await pollRaw(loginKey)
@@ -615,9 +593,9 @@ return {
         if (d.code === 86038) { loginKey = ''; return { status: 'expired' } }
         return { status: 'waiting' }
       } catch (e) { return { status: 'waiting' } }
-    })
+    }
 
-    harness.handle('logout', async function () {
+    handlers['logout'] = async function () {
       sessdata = ''
       biliJct = ''
       account = null
@@ -627,33 +605,33 @@ return {
       clearLogin()
       await advance(turn)
       return { ok: true, hasSessdata: false, video: video }
-    })
+    }
 
-    harness.handle('set-dmfont', function (args) {
+    handlers['set-dmfont'] = function (args) {
       let v = args && typeof args.value === 'number' ? args.value : 1
       if (v < 0.5) v = 0.5
       if (v > 2) v = 2
       dmFont = v
       if (creds) creds.set('bili_dmfont', String(v)).catch(function () {})
       return { ok: true, dmFont: dmFont }
-    })
+    }
 
-    harness.handle('set-dmdensity', function (args) {
+    handlers['set-dmdensity'] = function (args) {
       let v = args && typeof args.value === 'number' ? args.value : 1
       if (v < 0.3) v = 0.3
       if (v > 1) v = 1
       dmDensity = v
       if (creds) creds.set('bili_dmdensity', String(v)).catch(function () {})
       return { ok: true, dmDensity: dmDensity }
-    })
+    }
 
-    harness.handle('set-autopause', function (args) {
+    handlers['set-autopause'] = function (args) {
       autoPause = !!(args && args.value)
       if (creds) creds.set('bili_autopause', autoPause ? '1' : '0').catch(function () {})
       return { ok: true, autoPause: autoPause }
-    })
+    }
 
-    harness.handle('fav-video', async function (args) {
+    handlers['fav-video'] = async function (args) {
       const aid = args && typeof args.aid === 'number' ? args.aid : 0
       if (!aid) return { error: '缺少 aid' }
       if (!sessdata || !biliJct) return { error: '未登录' }
@@ -669,9 +647,9 @@ return {
       const r = await curlPost(FAV_DEAL, form, 'SESSDATA=' + sanitize(sessdata))
       if (r && r.code === 0) return { ok: true }
       return { error: (r && r.message) ? r.message : '收藏失败' }
-    })
+    }
 
-    harness.handle('get-playurl', async function (args) {
+    handlers['get-playurl'] = async function (args) {
       const bvid = args && typeof args.bvid === 'string' ? sanitize(args.bvid) : ''
       const cid = args && typeof args.cid === 'number' ? args.cid : 0
       const qn = args && typeof args.qn === 'number' ? args.qn : 0
@@ -679,25 +657,58 @@ return {
       const pu = await fetchPlayurl(bvid, cid, qn)
       if (pu) return pu
       return { error: '获取播放地址失败' }
-    })
+    }
 
-    harness.handle('get-dash', async function (args) {
+    handlers['get-dash'] = async function (args) {
       const bvid = args && typeof args.bvid === 'string' ? sanitize(args.bvid) : ''
       const cid = args && typeof args.cid === 'number' ? args.cid : 0
       if (!bvid || !cid) return { error: '缺少参数' }
       const d = await fetchDash(bvid, cid)
       if (d) return d
       return { error: '获取 DASH 地址失败' }
-    })
+    }
 
-    harness.handle('get-danmaku', async function (args) {
+    handlers['get-danmaku'] = async function (args) {
       const cid = args && typeof args.cid === 'number' ? args.cid : 0
       if (!cid) return []
       const bytes = await fetchDmProto(cid)
       if (!bytes || bytes.length < 4) return []
       return parseDmProto(bytes)
-    })
+    }
 
+    // Client<->Host JSON RPC: the browser half calls GET /bili-api/<method>.
+    if (ws) {
+      ctx.effect(function () {
+        return ws.register({
+          kind: 'prefix',
+          path: '/bili-api',
+          handler: function (req, res) {
+            const pathname = String(req.url || '').split('?')[0]
+            const method = pathname.split('/').filter(Boolean).pop() || ''
+            const q = parseQuery(req.url)
+            const args = {}
+            for (const k in q) {
+              if (k === 'value' || k === 'aid' || k === 'cid' || k === 'qn') args[k] = Number(q[k])
+              else args[k] = q[k]
+            }
+            const fn = handlers[method]
+            if (!fn) { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end('{"error":"unknown method"}'); return }
+            Promise.resolve()
+              .then(function () { return fn(args) })
+              .then(function (result) {
+                if (res.headersSent) return
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+                res.end(JSON.stringify(result === undefined ? null : result))
+              })
+              .catch(function (err) {
+                if (res.headersSent) return
+                res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
+                res.end(JSON.stringify({ error: String(err && err.message ? err.message : err) }))
+              })
+          },
+        })
+      })
+    }
     if (ws && subprocess) {
       ctx.effect(function () {
         return ws.register({
@@ -799,5 +810,4 @@ return {
         })
       })
     }
-  },
 }

@@ -1,0 +1,5 @@
+# dsh-bili-taskmaster bundle patch：向 web 组合挂载该插件（Host half 提供
+# /bili-proxy 流式代理与 /bili-api JSON RPC；client half 经 __ModuleLoader__ 挂载浮层）。
+- insert:
+    - id: bili-taskmaster
+      name: dsh-bili-taskmaster

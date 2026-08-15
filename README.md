@@ -1,107 +1,65 @@
 # dsh-bili-taskmaster
 
-在 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 的 Web GUI 里，挂一个可拖动、可缩放的 B 站随机视频小窗 —— 让鲸鱼在你打工的时候刷视频，「完事儿了」它会停下来喊你来验收。
+DSH Web GUI 内的 B 站随机视频小窗 —— **Bilibili 鲸鱼监工**。这是一个可安装进 DeepSeek Harness (DSH) 的**静态 bundle 插件**（dual-half：Node 半 + 浏览器半）。
 
-> 🐳 Bilibili 鲸鱼监工
+- 🐳 在你打工时随机播 B 站视频，任务跑完（`running → idle`）弹出 🎉 验收动画；开启「任务完成后自动暂停」会自动暂停。
+- 📺 可拖拽、可缩放；弹幕（字号/密度、暂停冻结、轨道避让）；扫码登录；1080P/720P/480P/360P 多档画质；收藏；自动连播 + 预载队列。
 
-它是一个 **DSH 动态 Cordis 插件**（dual-half：`host.js` + `client.js`），由两部分组成：
-
-- **Host 半**（`host.js`）：跑在 DSH 的 Node 进程里，负责访问 B 站 API、开一个 `/bili-proxy` 流式代理、处理登录 / 弹幕 / 收藏 / 画质等，并通过 `harness.handle` 暴露 RPC 给浏览器。
-- **Client 半**（`client.js`）：跑在浏览器页面里，把可拖拽播放器渲染进 `shell.overlay` 插槽，用 `host.call` 调用 Host 半。
-
----
-
-## 功能
-
-- 📺 **随机推荐流**：B 站个性化推荐（WBI 签名），未登录走匿名推荐，登录后自动个性化。
-- 🔐 **扫码登录**：站内生成二维码、轮询登录态，登录信息持久化到 `~/.dsh/.credentials.yaml`（`credentials` 服务），**源码里不硬编码任何密钥**。
-- 🎞️ **多档画质**：1080P（DASH + MediaSource/MSE 双 SourceBuffer 拼接）、720P / 480P / 360P（MP4 流式代理），画质选择跨视频记住。
-- 🚀 **流式代理**：`/bili-proxy` 用 `subprocess` 起 curl 直接转发，**不落盘、不占临时文件**，带 Range 支持（拖动进度条）和 moov 快启缓存。
-- 💬 **弹幕**：新 `x/v2/dm/list/seg.so` protobuf 接口 + 手写解析器；字号 / 密度滑杆，暂停冻结，滚动弹幕轨道避让（lane-busy 防重叠）。
-- 🐳 **鲸鱼彩蛋**：约每 26 秒有 55% 概率刷一条橙色鲸鱼弹幕。
-- ✅ **任务联动**：监听 `agent/status`，DSH 本轮任务结束（running→idle）时弹出 🎉 验收动画；开启「任务完成后自动暂停」会自动暂停视频。
-- ⭐ **收藏**：一键收藏到默认收藏夹（`fav-video`）。
-- 🔁 **自动连播**：`onEnded` 自动下一个，预载队列（10 个）+ moov 缓存。
-- 🖱️ **交互**：拖动标题栏移动、右下角拖拽缩放、播放 / 静音 / 音量 / 进度 / 倍速 / 画质、账号面板、设置侧栏。
-
----
-
-## 文件结构
+## 目录结构
 
 ```
 dsh-bili-taskmaster/
-├── host.js            # Host 半（code.host 函数体）
-├── client.js          # Client 半（code.client 函数体）
-├── preset/            # agent preset 脚手架（见下）
-│   ├── preset.yml
-│   ├── agent.cordis.yml
-│   └── README.md
-├── LICENSE
-└── README.md
+├── package.json              # bundle + client 声明
+├── cordis.patch.yml          # bundle patch：向组合插入 bili-taskmaster 行
+├── .dsh-plugin/
+│   ├── index.mjs             # Node 半（/bili-proxy 流式代理 + /bili-api JSON RPC）
+│   ├── client/
+│   │   └── index.mjs         # 浏览器半源码（React + slots 浮层）
+│   └── client.js             # 浏览器半产物（esbuild 生成，随插件分发）
+└── scripts/
+    └── build-client.mjs      # 生成 .dsh-plugin/client.js（--check 校验）
 ```
-
----
-
-## 工作原理（架构）
-
-```
-浏览器 (client.js)                         Node (host.js)
-┌────────────────────────┐  host.call()  ┌─────────────────────────────┐
-│ 可拖拽播放器 UI          │ ───────────▶ │ get-status / next / login-* │
-│ 弹幕渲染 / MSE 拼接     │ ◀─────────── │ get-playurl / get-dash / ... │
-│ React.createElement    │   (JSON)      │                             │
-└────────────────────────┘               │  curl → B 站 API            │
-        │  <video src=...>               │  /bili-proxy → 流式转发     │
-        └──────────── /bili-proxy ──────▶│  (Range / moov 快启)        │
-                                         └─────────────────────────────┘
-```
-
-- **Host 半**通过 `ctx.get('shell' | 'web' | 'subprocess' | 'credentials' | 'webServer')` 消费 DSH 服务；通过 `ctx.on('agent/status')` 感知任务状态；通过 `harness.handle(...)` 暴露只含 JSON 的 RPC。
-- **Client 半**声明 `inject: ['timer']`，用 `ctx.interval` / `ctx.timeout` 替代被沙箱屏蔽的浏览器定时器；用 `styles.insert` 注入 CSS（卸载时自动移除）；用 `React.createElement` 构建 UI（禁止 JSX / import）。
-- **弹幕**走 `subprocess.spawn`（curl 二进制流）拿到 protobuf，再用纯 JS 手写 varint / utf8 解析，规避旧 XML 接口失效的问题。
-
----
 
 ## 安装
 
-### 方式一：动态插件（当前可用，推荐）
+本包声明了 `dsh.bundle.patch`（是 bundle），所以用 DSH 自带的插件管理即可：
 
-动态插件是会话级的（进程重启即失效）。把 `host.js` 和 `client.js` 的内容喂给 DSH：
+```bash
+# 本地路径安装（开发时）
+dsh plugin --profile web add link:/绝对路径/dsh-bili-taskmaster
 
-1. 打开 DSH Web GUI（`http://127.0.0.1:3080`）。
-2. 通过插件卡片，或在支持 Cordis 插件工具的会话里执行：
-   - `cordis_define`：`code.host` = `host.js` 全文，`code.client` = `client.js` 全文。
-   - `cordis_run`：激活刚定义的包，按提示在 UI 里批准。
-3. 页面刷新后，右下角出现「📺 Bilibili 鲸鱼监工」小窗。
+# 或发布到 npm 后
+dsh plugin --profile web add dsh-bili-taskmaster
+```
 
-> 也可以直接让一个 DSH 会话帮你定义：把 `host.js` / `client.js` 的内容粘给它，让它执行 `cordis_define` + `cordis_run`。
+`dsh plugin add` 会把它加入 `~/.dsh/profiles/web/` 的 `dependencies`，并在 reconcile 时因为其 `dsh.bundle` 声明自动追加到 `dsh.profile.bundles`。然后重启 `dsh web`（组合变更需重启生效），刷新页面即可在右下角看到「📺 Bilibili 鲸鱼监工」。
 
-### 方式二：永久化（agent preset / 静态包，待办）
+> 手动等价步骤：把包 `link:` 进 profile 的 `node_modules`，把 `dsh-bili-taskmaster` 加进 `~/.dsh/profiles/web/package.json` 的 `dependencies` 与 `dsh.profile.bundles`，重启。
 
-要让它在重启后依然存在，需要把**动态函数体**移植成**静态 npm 包**：
+## 架构
 
-- Host 半 → 一个 ESM 模块，`export function apply(ctx)`，包 `main` 指向它；
-- Client 半 → 打包（如 `tsdown`）成浏览器 bundle，放在 `exports["./client"]`，并在 `package.json` 里声明：
+```
+浏览器 (.dsh-plugin/client.js)                Node (.dsh-plugin/index.mjs)
+┌────────────────────────────┐  fetch()   ┌──────────────────────────────┐
+│ 可拖拽播放器（slots 浮层）    │ ─────────▶ │ /bili-api/*  JSON RPC 分派    │
+│ 弹幕渲染 / MSE 1080P       │ ◀───────── │ 登录/推荐/弹幕/收藏/画质       │
+└────────────────────────────┘            │ /bili-proxy → curl 流式转发  │
+        │  <video src=...>                 │  (Range / moov 快启，不落盘) │
+        └────────── /bili-proxy ─────────▶└──────────────────────────────┘
+```
 
-  ```json
-  { "dsh": { "client": { "inject": ["..."], "platform": "web" } } }
-  ```
+- **Node 半**（`index.mjs`）：`ctx.get('shell' | 'credentials' | 'subprocess' | 'webServer')` 消费 DSH 服务；`ctx.on('agent/status')` 感知任务状态；`webServer.register` 注册 `/bili-api`（JSON RPC）与 `/bili-proxy`（MP4 流式代理，`subprocess` 起 curl 直转发，不落盘、带 Range 与 moov 快启缓存）。
+- **浏览器半**（`client.js`）：`inject: ['slots']`，注册进 `shell.overlay`；用 `React` 构建浮层；用 `fetch('/bili-api/…')` 调 Node 半；`MediaSource` 拼 1080P DASH；弹幕走 `x/v2/dm/list/seg.so` protobuf（手写解析）。
+- **登录态**：只写进 DSH 的 `credentials` 服务（`~/.dsh/.credentials.yaml`），源码不硬编码任何密钥。
 
-- 在组合文件里加一行 `name: '<包名>'` 引用它。
+## 改浏览器半
 
-这一步涉及几处实质改动：动态插件的 `harness.handle` / `host.call` 是一套轻量的「单包私有 RPC」，静态插件要改用 DSH 的 api-proxy / 远程服务层；Client 半还要接入 `@deepseek-ai/dsh-client-runtime` 等模块并打包。**这个移植还没做**，`preset/` 里是脚手架和说明。需要的话我可以继续完成这个移植。
+改 `.dsh-plugin/client/index.mjs`，然后重新生成产物并提交：
 
-> 平面归属提示：这个插件是「跨会话的浏览器浮层 + 流式代理」，按 DSH 的 plane 规则，永久的家更接近 **host composition**（`base.cordis.yml` / `web.cordis.yml`）而非 agent preset；不过它不发布任何 service（只消费），所以也能以松散行存在。
-
----
-
-## 隐私与安全
-
-- 登录态（`SESSDATA` / `bili_jct`）只写入 DSH 的 `credentials` 服务，落盘在 `~/.dsh/.credentials.yaml`，**不会写进本仓库**。
-- 所有网络请求经 Host 半转发，浏览器半不直接 `fetch` B 站。
-- 代理只回放 MP4 流，不做鉴权校验 —— 假设在本地回环（`127.0.0.1`）使用。若要对公网开放，请自行加访问控制。
-
----
+```bash
+node scripts/build-client.mjs            # 生成 .dsh-plugin/client.js
+node scripts/build-client.mjs --check    # 校验产物与生成器一致
+```
 
 ## License
 

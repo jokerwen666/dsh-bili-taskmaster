@@ -1,0 +1,28 @@
+{
+  "name": "dsh-bili-taskmaster",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DSH Web GUI 内的 B 站随机视频小窗（鲸鱼监工）：可拖拽缩放、弹幕、扫码登录、多档画质、任务完成联动",
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs",
+    "check:client": "node scripts/build-client.mjs --check"
+  },
+  "main": "./.dsh-plugin/index.mjs",
+  "exports": {
+    ".": "./.dsh-plugin/index.mjs",
+    "./client": "./.dsh-plugin/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": ["@deepseek-ai/dsh-client-runtime"],
+      "platform": "web"
+    }
+  },
+  "license": "MIT"
+}
