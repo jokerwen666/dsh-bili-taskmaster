@@ -1,13 +1,14 @@
 export const name = 'dsh-bili-taskmaster'
+export const inject = ['webServer', 'shell', 'subprocess', 'credentials']
 
 // dsh-bili-taskmaster — HOST half (static Cordis plugin, ESM).
 // Serves the /bili-proxy streaming MP4 proxy and the /bili-api JSON RPC.
 
 export function apply(ctx) {
-    const shell = ctx.get('shell')
-    const creds = ctx.get('credentials')
-    const subprocess = ctx.get('subprocess')
-    const ws = ctx.get('webServer')
+    const shell = ctx.shell
+    const creds = ctx.credentials
+    const subprocess = ctx.subprocess
+    const ws = ctx.webServer
 
     let turn = 0
     let video = null
