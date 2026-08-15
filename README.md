@@ -1,27 +1,30 @@
-# dsh-bili-taskmaster
+# 🐳 dsh-bili-taskmaster · Bilibili 鲸鱼监工
 
-DSH Web GUI 内的 B 站随机视频小窗 —— **Bilibili 鲸鱼监工** 🐳。在你打工时随机播 B 站视频，任务干完它会停下来喊你来验收。
+在 [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 的 Web GUI 里，养一只边干活边刷 B 站的鲸鱼——你打工时它随机播视频陪着你，任务一干完，它就停下来喊你来验收。
 
-![效果截图](assets/screenshot.png)
+[![npm version](https://img.shields.io/npm/v/dsh-bili-taskmaster)](https://www.npmjs.com/package/dsh-bili-taskmaster)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-## 功能介绍
+![Bilibili 鲸鱼监工](assets/bili-taskmaster.png)
 
-- 🐳 **任务联动**：DSH 任务运行时播放，任务完成（`running → idle`）弹出 🎉 验收动画；可开启「任务完成后自动暂停」。
-- 📺 **可拖拽、可缩放**：拖动标题栏移动，右下角拖拽缩放，支持最小化 / 关闭。
-- 🎞️ **多档画质**：1080P（DASH + MediaSource）、720P / 480P / 360P（MP4 流式代理），画质选择跨视频记住。
-- 💬 **弹幕**：字号 / 密度滑杆、暂停冻结、滚动轨道避让防重叠；约每 26 秒有 55% 概率刷一条橙色鲸鱼彩蛋弹幕。
-- 🔐 **扫码登录**：站内生成二维码 + 轮询，登录态持久化到 DSH 的 `credentials`（源码不硬编码任何密钥）。
-- 🔁 **自动连播**：播完自动下一个，预载队列（10 个）+ moov 快启缓存。
-- ⭐ **收藏**：一键收藏到默认收藏夹；播放 / 静音 / 音量 / 进度 / 倍速控制齐全。
+## ✨ 它凭什么有趣
 
-## 安装
+- 🐳 **真正的「监工」**：跟着你的任务节奏走——`running` 时刷视频陪你打工，`idle` 时弹出 🎉 验收动画；开启「任务完成后自动暂停」，干完活它自动噤声，不打扰。
+- 📺 **随手可调的小窗**：拖动标题栏随处放，右下角拖拽缩放，最小化 / 关闭一键搞定。
+- 🎞️ **画质不掉队**：1080P（DASH + MediaSource）到 360P 全档位，切换一次就记住，下次不用重选。
+- 💬 **弹幕不打架**：字号 / 密度滑杆随心调，暂停即冻结，滚动轨道自动避让不重叠；约每 26 秒还有 55% 概率蹦出一条橙色鲸鱼彩蛋。
+- 🔐 **登录即个性化**：扫码登录，登录态安全写进 DSH 的 `credentials`，源码零硬编码密钥。
+- 🔁 **播不停**：自动连播 + 10 条预载队列 + moov 快启，换片几乎无感。
+- ⭐ **顺手收藏**：一键收藏到默认收藏夹；播放 / 静音 / 音量 / 进度 / 倍速，一个不少。
+
+## 🚀 安装
 
 ```bash
 dsh plugin --profile web add dsh-bili-taskmaster
 ```
 
-重启 `dsh web`，刷新页面，右下角出现「📺 Bilibili 鲸鱼监工」即安装成功。
+重启 `dsh web`，刷新页面，右下角那只 🐳 就出现了。
 
-## License
+## 📄 License
 
 [MIT](./LICENSE)
