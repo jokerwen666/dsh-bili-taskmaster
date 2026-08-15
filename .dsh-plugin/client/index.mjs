@@ -308,6 +308,9 @@ export function apply(ctx) {
     const ap = React.useState(false)
     const autoPause = ap[0]
     const setAutoPause = ap[1]
+    const sp = React.useState(true)
+    const showPill = sp[0]
+    const setShowPill = sp[1]
     const fs = React.useState(1)
     const dmFontScale = fs[0]
     const setDmFontScale = fs[1]
@@ -554,6 +557,9 @@ export function apply(ctx) {
         autoPauseEnabled = s.autoPause
         setAutoPause(s.autoPause)
       }
+      if (typeof s.showPill === 'boolean' && s.showPill !== showPill) {
+        setShowPill(s.showPill)
+      }
       if (s.agentStatus === 'idle' && prevAgentStatus === 'running') {
         setCelebrate(true)
         setTimeout(function () { setCelebrate(false) }, 5000)
@@ -680,6 +686,12 @@ export function apply(ctx) {
       biliCall('set-autopause', { value: v }).catch(function () {})
     }
 
+    function onShowPill(e) {
+      const v = e.target.checked
+      setShowPill(v)
+      biliCall('set-showpill', { value: v }).catch(function () {})
+    }
+
     function spawnDm(item) {
       const id = dmId
       dmId += 1
@@ -730,6 +742,7 @@ export function apply(ctx) {
           if (typeof s.dmFont === 'number') setDmFontScale(s.dmFont)
           if (typeof s.dmDensity === 'number') setDmDensity(s.dmDensity)
           if (typeof s.autoPause === 'boolean') { autoPauseEnabled = s.autoPause; setAutoPause(s.autoPause) }
+          if (typeof s.showPill === 'boolean') setShowPill(s.showPill)
         }
         if (s && s.video && s.video.bvid) {
           currentBvid = s.video.bvid
@@ -860,6 +873,12 @@ export function apply(ctx) {
             React.createElement('span', null, '任务完成后自动暂停'),
           ),
           React.createElement('div', { className: 'bili-hint' }, '开启后，当 DSH 本轮任务执行完毕（状态回到空闲）时，会自动暂停视频。'),
+          React.createElement('div', { className: 'bili-setgroup' }, '悬浮'),
+          React.createElement('label', { className: 'bili-setrow' },
+            React.createElement('input', { type: 'checkbox', checked: showPill, onChange: onShowPill }),
+            React.createElement('span', null, '显示右下角缩略图标'),
+          ),
+          React.createElement('div', { className: 'bili-hint' }, '关闭后，最小化 / 关闭播放器时不再显示右下角的缩略图标。'),
           React.createElement('div', { className: 'bili-setgroup' }, '弹幕'),
           React.createElement('div', { className: 'bili-setrow', style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'default' } },
             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between' } },
@@ -1011,7 +1030,7 @@ export function apply(ctx) {
       )
     }
 
-    return React.createElement('div', null, mode === 'open' ? renderWindow() : renderPill())
+    return React.createElement('div', null, mode === 'open' ? renderWindow() : (showPill ? renderPill() : null))
   }
 
   slots.inject('shell.overlay', function () {

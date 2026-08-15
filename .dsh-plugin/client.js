@@ -358,6 +358,9 @@ function apply(ctx) {
     const ap = import_react.default.useState(false);
     const autoPause = ap[0];
     const setAutoPause = ap[1];
+    const sp = import_react.default.useState(true);
+    const showPill = sp[0];
+    const setShowPill = sp[1];
     const fs = import_react.default.useState(1);
     const dmFontScale = fs[0];
     const setDmFontScale = fs[1];
@@ -647,6 +650,9 @@ function apply(ctx) {
         autoPauseEnabled = s.autoPause;
         setAutoPause(s.autoPause);
       }
+      if (typeof s.showPill === "boolean" && s.showPill !== showPill) {
+        setShowPill(s.showPill);
+      }
       if (s.agentStatus === "idle" && prevAgentStatus === "running") {
         setCelebrate(true);
         setTimeout(function() {
@@ -800,6 +806,12 @@ function apply(ctx) {
       biliCall("set-autopause", { value: v }).catch(function() {
       });
     }
+    function onShowPill(e) {
+      const v = e.target.checked;
+      setShowPill(v);
+      biliCall("set-showpill", { value: v }).catch(function() {
+      });
+    }
     function spawnDm(item) {
       const id = dmId;
       dmId += 1;
@@ -862,6 +874,7 @@ function apply(ctx) {
             autoPauseEnabled = s.autoPause;
             setAutoPause(s.autoPause);
           }
+          if (typeof s.showPill === "boolean") setShowPill(s.showPill);
         }
         if (s && s.video && s.video.bvid) {
           currentBvid = s.video.bvid;
@@ -1043,6 +1056,14 @@ function apply(ctx) {
             import_react.default.createElement("span", null, "\u4EFB\u52A1\u5B8C\u6210\u540E\u81EA\u52A8\u6682\u505C")
           ),
           import_react.default.createElement("div", { className: "bili-hint" }, "\u5F00\u542F\u540E\uFF0C\u5F53 DSH \u672C\u8F6E\u4EFB\u52A1\u6267\u884C\u5B8C\u6BD5\uFF08\u72B6\u6001\u56DE\u5230\u7A7A\u95F2\uFF09\u65F6\uFF0C\u4F1A\u81EA\u52A8\u6682\u505C\u89C6\u9891\u3002"),
+          import_react.default.createElement("div", { className: "bili-setgroup" }, "\u60AC\u6D6E"),
+          import_react.default.createElement(
+            "label",
+            { className: "bili-setrow" },
+            import_react.default.createElement("input", { type: "checkbox", checked: showPill, onChange: onShowPill }),
+            import_react.default.createElement("span", null, "\u663E\u793A\u53F3\u4E0B\u89D2\u7F29\u7565\u56FE\u6807")
+          ),
+          import_react.default.createElement("div", { className: "bili-hint" }, "\u5173\u95ED\u540E\uFF0C\u6700\u5C0F\u5316 / \u5173\u95ED\u64AD\u653E\u5668\u65F6\u4E0D\u518D\u663E\u793A\u53F3\u4E0B\u89D2\u7684\u7F29\u7565\u56FE\u6807\u3002"),
           import_react.default.createElement("div", { className: "bili-setgroup" }, "\u5F39\u5E55"),
           import_react.default.createElement(
             "div",
@@ -1233,7 +1254,7 @@ function apply(ctx) {
         import_react.default.createElement("span", null, "Bilibili \u9CB8\u9C7C\u76D1\u5DE5")
       );
     }
-    return import_react.default.createElement("div", null, mode === "open" ? renderWindow() : renderPill());
+    return import_react.default.createElement("div", null, mode === "open" ? renderWindow() : showPill ? renderPill() : null);
   }
   slots.inject("shell.overlay", function() {
     return slots.register(
