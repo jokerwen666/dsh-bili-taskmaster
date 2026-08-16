@@ -83,6 +83,8 @@ export function apply(ctx) {
       '.bili-setgroup{font-size:11px;color:#8c959f;text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px}',
       '.bili-slider{flex:1;accent-color:#fb7299}',
       '.bili-pill{position:fixed;z-index:100000;bottom:16px;right:16px;background:linear-gradient(90deg,#fb7299,#fc9bb7);color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.25);pointer-events:auto;user-select:none;display:inline-flex;align-items:center;gap:6px}',
+      '.bili-pill-toggle{border:none;background:rgba(255,255,255,0.28);color:#fff;border-radius:50%;width:24px;height:24px;font-size:13px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}',
+      '.bili-pill-toggle:hover{background:rgba(255,255,255,0.45)}',
     ].join('\n'))
   })
 
@@ -308,6 +310,9 @@ export function apply(ctx) {
     const ap = React.useState(false)
     const autoPause = ap[0]
     const setAutoPause = ap[1]
+    const apl = React.useState(true)
+    const autoPlay = apl[0]
+    const setAutoPlay = apl[1]
     const fs = React.useState(1)
     const dmFontScale = fs[0]
     const setDmFontScale = fs[1]
@@ -554,6 +559,9 @@ export function apply(ctx) {
         autoPauseEnabled = s.autoPause
         setAutoPause(s.autoPause)
       }
+      if (typeof s.autoPlay === 'boolean' && s.autoPlay !== autoPlay) {
+        setAutoPlay(s.autoPlay)
+      }
       if (s.agentStatus === 'idle' && prevAgentStatus === 'running') {
         setCelebrate(true)
         setTimeout(function () { setCelebrate(false) }, 5000)
@@ -730,6 +738,7 @@ export function apply(ctx) {
           if (typeof s.dmFont === 'number') setDmFontScale(s.dmFont)
           if (typeof s.dmDensity === 'number') setDmDensity(s.dmDensity)
           if (typeof s.autoPause === 'boolean') { autoPauseEnabled = s.autoPause; setAutoPause(s.autoPause) }
+          if (typeof s.autoPlay === 'boolean') setAutoPlay(s.autoPlay)
         }
         if (s && s.video && s.video.bvid) {
           currentBvid = s.video.bvid
@@ -897,7 +906,7 @@ export function apply(ctx) {
               ref: function (el) { videoEl = el },
               className: 'bili-video',
               src: videoSrc(),
-              autoPlay: true,
+              autoPlay: autoPlay,
               onTimeUpdate: onTimeUpdate,
               onLoadedMetadata: function (e) { setDuration(e.currentTarget.duration || 0) },
               onDurationChange: function (e) { setDuration(e.currentTarget.duration || 0) },
@@ -1008,6 +1017,16 @@ export function apply(ctx) {
       return React.createElement('div', { className: 'bili-pill', onClick: function () { setMode('open') } },
         React.createElement('span', null, '📺'),
         React.createElement('span', null, 'Bilibili 鲸鱼监工'),
+        React.createElement('button', {
+          className: 'bili-pill-toggle',
+          title: autoPlay ? '点击暂停自动播放' : '点击启用自动播放',
+          onClick: function (e) {
+            e.stopPropagation()
+            const v = !autoPlay
+            setAutoPlay(v)
+            biliCall('set-autoplay', { value: v }).catch(function () {})
+          },
+        }, autoPlay ? '⏸' : '▶'),
       )
     }
 

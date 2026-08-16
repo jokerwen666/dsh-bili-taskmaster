@@ -117,7 +117,9 @@ function apply(ctx) {
       ".bili-setrow{display:flex;align-items:center;gap:8px;font-size:13px;color:#1f2328;padding:8px 0;cursor:pointer}",
       ".bili-setgroup{font-size:11px;color:#8c959f;text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px}",
       ".bili-slider{flex:1;accent-color:#fb7299}",
-      ".bili-pill{position:fixed;z-index:100000;bottom:16px;right:16px;background:linear-gradient(90deg,#fb7299,#fc9bb7);color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.25);pointer-events:auto;user-select:none;display:inline-flex;align-items:center;gap:6px}"
+      ".bili-pill{position:fixed;z-index:100000;bottom:16px;right:16px;background:linear-gradient(90deg,#fb7299,#fc9bb7);color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.25);pointer-events:auto;user-select:none;display:inline-flex;align-items:center;gap:6px}",
+      ".bili-pill-toggle{border:none;background:rgba(255,255,255,0.28);color:#fff;border-radius:50%;width:24px;height:24px;font-size:13px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}",
+      ".bili-pill-toggle:hover{background:rgba(255,255,255,0.45)}"
     ].join("\n"));
   });
   let lastTurn = 0;
@@ -358,6 +360,9 @@ function apply(ctx) {
     const ap = import_react.default.useState(false);
     const autoPause = ap[0];
     const setAutoPause = ap[1];
+    const apl = import_react.default.useState(true);
+    const autoPlay = apl[0];
+    const setAutoPlay = apl[1];
     const fs = import_react.default.useState(1);
     const dmFontScale = fs[0];
     const setDmFontScale = fs[1];
@@ -647,6 +652,9 @@ function apply(ctx) {
         autoPauseEnabled = s.autoPause;
         setAutoPause(s.autoPause);
       }
+      if (typeof s.autoPlay === "boolean" && s.autoPlay !== autoPlay) {
+        setAutoPlay(s.autoPlay);
+      }
       if (s.agentStatus === "idle" && prevAgentStatus === "running") {
         setCelebrate(true);
         setTimeout(function() {
@@ -862,6 +870,7 @@ function apply(ctx) {
             autoPauseEnabled = s.autoPause;
             setAutoPause(s.autoPause);
           }
+          if (typeof s.autoPlay === "boolean") setAutoPlay(s.autoPlay);
         }
         if (s && s.video && s.video.bvid) {
           currentBvid = s.video.bvid;
@@ -1086,7 +1095,7 @@ function apply(ctx) {
           },
           className: "bili-video",
           src: videoSrc(),
-          autoPlay: true,
+          autoPlay,
           onTimeUpdate,
           onLoadedMetadata: function(e) {
             setDuration(e.currentTarget.duration || 0);
@@ -1230,7 +1239,18 @@ function apply(ctx) {
           setMode("open");
         } },
         import_react.default.createElement("span", null, "\u{1F4FA}"),
-        import_react.default.createElement("span", null, "Bilibili \u9CB8\u9C7C\u76D1\u5DE5")
+        import_react.default.createElement("span", null, "Bilibili \u9CB8\u9C7C\u76D1\u5DE5"),
+        import_react.default.createElement("button", {
+          className: "bili-pill-toggle",
+          title: autoPlay ? "\u70B9\u51FB\u6682\u505C\u81EA\u52A8\u64AD\u653E" : "\u70B9\u51FB\u542F\u7528\u81EA\u52A8\u64AD\u653E",
+          onClick: function(e) {
+            e.stopPropagation();
+            const v = !autoPlay;
+            setAutoPlay(v);
+            biliCall("set-autoplay", { value: v }).catch(function() {
+            });
+          }
+        }, autoPlay ? "\u23F8" : "\u25B6")
       );
     }
     return import_react.default.createElement("div", null, mode === "open" ? renderWindow() : renderPill());

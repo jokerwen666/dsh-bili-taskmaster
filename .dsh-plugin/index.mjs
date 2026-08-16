@@ -21,6 +21,7 @@ export function apply(ctx) {
     let dmFont = 1
     let dmDensity = 1
     let autoPause = false
+    let autoPlay = true
     let videoQueue = []
     let refilling = false
     let wbiMixinKey = ''
@@ -346,12 +347,14 @@ export function apply(ctx) {
           const f = await creds.resolve('bili_dmfont')
           const dd = await creds.resolve('bili_dmdensity')
           const ap = await creds.resolve('bili_autopause')
+          const apl = await creds.resolve('bili_autoplay')
           if (s && s.value) sessdata = s.value
           if (j && j.value) biliJct = j.value
           if (a && a.value) { try { const p = JSON.parse(a.value); if (p && p.nickname) account = p } catch (e) {} }
           if (f && f.value) { const n = parseFloat(f.value); if (isFinite(n) && n >= 0.5 && n <= 2) dmFont = n }
           if (dd && dd.value) { const n = parseFloat(dd.value); if (isFinite(n) && n >= 0.3 && n <= 1) dmDensity = n }
           if (ap && ap.value === '1') autoPause = true
+          if (apl && apl.value === '0') autoPlay = false
         } catch (e) { console.error('[bili] restore failed:', e) }
       })()
     }
@@ -550,13 +553,13 @@ export function apply(ctx) {
 
     const handlers = {}
     handlers['get-status'] = function () {
-      return { turn: turn, video: video, hasSessdata: sessdata.length > 0, account: account, error: lastError, agentStatus: agentStatus, dmFont: dmFont, dmDensity: dmDensity, autoPause: autoPause }
+      return { turn: turn, video: video, hasSessdata: sessdata.length > 0, account: account, error: lastError, agentStatus: agentStatus, dmFont: dmFont, dmDensity: dmDensity, autoPause: autoPause, autoPlay: autoPlay }
     }
 
     handlers['next'] = async function () {
       turn += 1
       await advance(turn)
-      return { turn: turn, video: video, error: lastError, hasSessdata: sessdata.length > 0, account: account, agentStatus: agentStatus, dmFont: dmFont, dmDensity: dmDensity, autoPause: autoPause }
+      return { turn: turn, video: video, error: lastError, hasSessdata: sessdata.length > 0, account: account, agentStatus: agentStatus, dmFont: dmFont, dmDensity: dmDensity, autoPause: autoPause, autoPlay: autoPlay }
     }
 
     handlers['login-start'] = async function () {
@@ -630,6 +633,12 @@ export function apply(ctx) {
       autoPause = !!(args && args.value)
       if (creds) creds.set('bili_autopause', autoPause ? '1' : '0').catch(function () {})
       return { ok: true, autoPause: autoPause }
+    }
+
+    handlers['set-autoplay'] = function (args) {
+      autoPlay = !!(args && args.value)
+      if (creds) creds.set('bili_autoplay', autoPlay ? '1' : '0').catch(function () {})
+      return { ok: true, autoPlay: autoPlay }
     }
 
     handlers['fav-video'] = async function (args) {
