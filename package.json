@@ -1,6 +1,6 @@
 {
   "name": "dsh-bili-taskmaster",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "DSH Web GUI 内的 B 站随机视频小窗（鲸鱼监工）：可拖拽缩放、弹幕、扫码登录、多档画质、任务完成联动",
   "scripts": {
